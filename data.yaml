@@ -1,0 +1,12 @@
+# YOLOv8 Pothole Detection
+# Dataset: intel-unnati-training-program/pothole-detection-bqu6s
+# Source:  https://universe.roboflow.com/intel-unnati-training-program/pothole-detection-bqu6s
+
+path: C:/Users/kanav/OneDrive/Desktop/mlproject/dataset
+train: train/images
+val:   valid/images
+test:  test/images
+
+nc: 1
+names:
+  0: pothole

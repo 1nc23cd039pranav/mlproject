@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Pothole Detection System</title>
+  <meta name="description"
+        content="AI-powered pothole detection and maintenance alert system using YOLOv8 and Machine Learning." />
+  <style>
+    /* ── Reset & base ────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem;
+    }
+
+    /* ── Header ─────────────────────────────────────────────── */
+    header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+    header h1 {
+      font-size: clamp(1.6rem, 4vw, 2.4rem);
+      font-weight: 700;
+      background: linear-gradient(135deg, #60a5fa, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: .5rem;
+    }
+    header p {
+      color: #94a3b8;
+      font-size: .95rem;
+    }
+
+    /* ── Card ───────────────────────────────────────────────── */
+    .card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 1rem;
+      padding: 2rem;
+      width: 100%;
+      max-width: 700px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.4);
+    }
+    .card + .card { margin-top: 1.5rem; }
+
+    /* ── Upload zone ────────────────────────────────────────── */
+    #drop-zone {
+      border: 2px dashed #475569;
+      border-radius: .75rem;
+      padding: 2.5rem 1rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .25s, background .25s;
+    }
+    #drop-zone:hover, #drop-zone.drag-over {
+      border-color: #60a5fa;
+      background: rgba(96,165,250,.06);
+    }
+    #drop-zone .icon { font-size: 3rem; margin-bottom: .75rem; }
+    #drop-zone p { color: #94a3b8; font-size: .9rem; }
+    #file-input { display: none; }
+
+    /* Preview */
+    #preview-wrap { display: none; margin-top: 1rem; text-align: center; }
+    #preview-img  {
+      max-width: 100%; max-height: 260px;
+      border-radius: .5rem;
+      border: 1px solid #334155;
+    }
+
+    /* ── Inputs ─────────────────────────────────────────────── */
+    .form-group { margin-top: 1.25rem; }
+    label { display: block; font-size: .85rem; color: #94a3b8; margin-bottom: .35rem; }
+    input[type="text"] {
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: .5rem;
+      color: #e2e8f0;
+      padding: .55rem .9rem;
+      font-size: .95rem;
+      outline: none;
+      transition: border-color .2s;
+    }
+    input[type="text"]:focus { border-color: #60a5fa; }
+
+    /* ── Button ─────────────────────────────────────────────── */
+    button#analyze-btn {
+      margin-top: 1.5rem;
+      width: 100%;
+      padding: .85rem;
+      background: linear-gradient(135deg, #3b82f6, #7c3aed);
+      border: none;
+      border-radius: .6rem;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity .2s, transform .15s;
+    }
+    button#analyze-btn:hover   { opacity: .92; }
+    button#analyze-btn:active  { transform: scale(.98); }
+    button#analyze-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* ── Loader ─────────────────────────────────────────────── */
+    #loader {
+      display: none;
+      margin-top: 1.5rem;
+      text-align: center;
+    }
+    .spinner {
+      width: 42px; height: 42px;
+      border: 4px solid #334155;
+      border-top-color: #60a5fa;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      margin: 0 auto .75rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Results card ───────────────────────────────────────── */
+    #results-card { display: none; }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .stat-box {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: .75rem;
+      padding: 1rem;
+      text-align: center;
+    }
+    .stat-box .val {
+      font-size: 1.7rem;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+    .stat-box .lbl { font-size: .75rem; color: #64748b; margin-top: .2rem; }
+
+    /* Severity colours */
+    .sev-High   { color: #f87171; }
+    .sev-Medium { color: #fb923c; }
+    .sev-Low    { color: #4ade80; }
+    .sev-None   { color: #94a3b8; }
+
+    /* Alert badge */
+    .alert-badge {
+      display: inline-flex; align-items: center; gap: .4rem;
+      background: rgba(248,113,113,.12);
+      border: 1px solid rgba(248,113,113,.35);
+      color: #f87171;
+      border-radius: 999px;
+      padding: .3rem .8rem;
+      font-size: .8rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+    .alert-badge.ok {
+      background: rgba(74,222,128,.10);
+      border-color: rgba(74,222,128,.3);
+      color: #4ade80;
+    }
+
+    /* Result image */
+    #result-img-wrap { margin-top: 1rem; text-align: center; }
+    #result-img {
+      max-width: 100%;
+      border-radius: .5rem;
+      border: 1px solid #334155;
+    }
+
+    /* Detection list */
+    #det-list { margin-top: 1.25rem; }
+    .det-item {
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: .5rem;
+      padding: .7rem 1rem;
+      margin-bottom: .6rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: .85rem;
+    }
+    .det-sev {
+      font-weight: 600;
+      padding: .15rem .5rem;
+      border-radius: .25rem;
+      font-size: .75rem;
+    }
+    .det-sev.High   { background: rgba(248,113,113,.15); color:#f87171; }
+    .det-sev.Medium { background: rgba(251,146,60,.15);  color:#fb923c; }
+    .det-sev.Low    { background: rgba(74,222,128,.12);  color:#4ade80; }
+
+    /* Error box */
+    #error-box {
+      display: none;
+      background: rgba(248,113,113,.1);
+      border: 1px solid rgba(248,113,113,.3);
+      color: #f87171;
+      border-radius: .6rem;
+      padding: .9rem 1.1rem;
+      margin-top: 1rem;
+      font-size: .9rem;
+    }
+
+    footer {
+      margin-top: 3rem;
+      color: #475569;
+      font-size: .8rem;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🛣️ Smart Pothole Detection System</h1>
+  <p>YOLOv8 Detection &nbsp;·&nbsp; RandomForest Severity &nbsp;·&nbsp; Automated Alerts</p>
+</header>
+
+<!-- Upload Card -->
+<div class="card" id="upload-card">
+  <div id="drop-zone" role="button" aria-label="Upload image">
+    <div class="icon">📷</div>
+    <p><strong>Drop a road image here</strong> or click to browse</p>
+    <p style="margin-top:.4rem; font-size:.8rem;">JPG · PNG · BMP · WEBP (max 16 MB)</p>
+  </div>
+  <input type="file" id="file-input" accept=".jpg,.jpeg,.png,.bmp,.webp" />
+
+  <div id="preview-wrap">
+    <img id="preview-img" alt="Preview" />
+    <p style="color:#64748b;font-size:.8rem;margin-top:.4rem;" id="preview-name"></p>
+  </div>
+
+  <div class="form-group">
+    <label for="location-input">Location (optional)</label>
+    <input type="text" id="location-input"
+           placeholder="e.g. MG Road, Sector 5, Near Junction" />
+  </div>
+
+  <button id="analyze-btn" disabled>Analyze Image</button>
+
+  <div id="loader">
+    <div class="spinner"></div>
+    <p style="color:#94a3b8; font-size:.9rem;">Running AI pipeline…</p>
+  </div>
+
+  <div id="error-box"></div>
+</div>
+
+<!-- Results Card -->
+<div class="card" id="results-card">
+  <h2 style="font-size:1.1rem; margin-bottom:1rem; color:#cbd5e1;">
+    🔍 Detection Results
+  </h2>
+
+  <!-- Stats -->
+  <div class="stat-grid">
+    <div class="stat-box">
+      <div class="val" id="stat-count">–</div>
+      <div class="lbl">Potholes Found</div>
+    </div>
+    <div class="stat-box">
+      <div class="val" id="stat-severity">–</div>
+      <div class="lbl">Highest Severity</div>
+    </div>
+    <div class="stat-box">
+      <div class="val" id="stat-conf">–</div>
+      <div class="lbl">Avg Confidence</div>
+    </div>
+    <div class="stat-box">
+      <div class="val" id="stat-ts" style="font-size:1rem;">–</div>
+      <div class="lbl">Timestamp</div>
+    </div>
+  </div>
+
+  <!-- Alert badge -->
+  <div id="alert-badge-wrap"></div>
+
+  <!-- Annotated result image -->
+  <div id="result-img-wrap"></div>
+
+  <!-- Per-detection list -->
+  <div id="det-list"></div>
+</div>
+
+<footer>Smart Pothole Detection System &nbsp;|&nbsp; YOLOv8 + RandomForest + Flask</footer>
+
+<script>
+  /* ── DOM refs ─────────────────────────────────────────────── */
+  const dropZone    = document.getElementById('drop-zone');
+  const fileInput   = document.getElementById('file-input');
+  const previewWrap = document.getElementById('preview-wrap');
+  const previewImg  = document.getElementById('preview-img');
+  const previewName = document.getElementById('preview-name');
+  const analyzeBtn  = document.getElementById('analyze-btn');
+  const loader      = document.getElementById('loader');
+  const errorBox    = document.getElementById('error-box');
+  const resultsCard = document.getElementById('results-card');
+
+  let selectedFile = null;
+
+  /* ── File selection ───────────────────────────────────────── */
+  dropZone.addEventListener('click', () => fileInput.click());
+
+  dropZone.addEventListener('dragover', e => {
+    e.preventDefault();
+    dropZone.classList.add('drag-over');
+  });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+  });
+
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files.length) handleFile(fileInput.files[0]);
+  });
+
+  function handleFile(file) {
+    selectedFile = file;
+    const url = URL.createObjectURL(file);
+    previewImg.src = url;
+    previewName.textContent = file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)';
+    previewWrap.style.display = 'block';
+    analyzeBtn.disabled = false;
+    errorBox.style.display = 'none';
+    resultsCard.style.display = 'none';
+  }
+
+  /* ── Analyze ──────────────────────────────────────────────── */
+  analyzeBtn.addEventListener('click', async () => {
+    if (!selectedFile) return;
+
+    analyzeBtn.disabled = true;
+    loader.style.display = 'block';
+    errorBox.style.display = 'none';
+    resultsCard.style.display = 'none';
+
+    const fd = new FormData();
+    fd.append('image', selectedFile);
+    fd.append('location', document.getElementById('location-input').value || 'Unknown');
+
+    try {
+      const resp = await fetch('/predict', { method: 'POST', body: fd });
+      const data = await resp.json();
+
+      loader.style.display = 'none';
+      analyzeBtn.disabled = false;
+
+      if (!resp.ok || data.error) {
+        showError(data.error || 'Unknown server error');
+        return;
+      }
+      renderResults(data);
+
+    } catch (err) {
+      loader.style.display = 'none';
+      analyzeBtn.disabled = false;
+      showError('Network error: ' + err.message);
+    }
+  });
+
+  /* ── Render results ───────────────────────────────────────── */
+  function renderResults(data) {
+    const sev = data.highest_severity || 'None';
+
+    document.getElementById('stat-count').textContent    = data.pothole_count ?? '–';
+    document.getElementById('stat-severity').textContent = sev;
+    document.getElementById('stat-severity').className   = 'val sev-' + sev;
+    document.getElementById('stat-conf').textContent     =
+      data.avg_confidence ? (data.avg_confidence * 100).toFixed(1) + '%' : '–';
+    document.getElementById('stat-ts').textContent       = data.timestamp || '–';
+
+    /* Alert badge */
+    const badgeWrap = document.getElementById('alert-badge-wrap');
+    if (data.alert_sent) {
+      badgeWrap.innerHTML =
+        '<div class="alert-badge">🚨 Email alert dispatched to maintenance authority</div>';
+    } else if (sev === 'High') {
+      badgeWrap.innerHTML =
+        '<div class="alert-badge">⚠️ HIGH severity – email not configured</div>';
+    } else {
+      badgeWrap.innerHTML =
+        '<div class="alert-badge ok">✔ No alert required (' + sev + ' severity)</div>';
+    }
+
+    /* Result image */
+    const imgWrap = document.getElementById('result-img-wrap');
+    if (data.output_image_url) {
+      imgWrap.innerHTML =
+        '<p style="color:#64748b;font-size:.8rem;margin-bottom:.5rem;">Annotated Output:</p>' +
+        '<img id="result-img" src="' + data.output_image_url + '" alt="Annotated result" />';
+    } else {
+      imgWrap.innerHTML = '';
+    }
+
+    /* Per-detection list */
+    const detList = document.getElementById('det-list');
+    if (data.detections && data.detections.length) {
+      let html = '<p style="color:#64748b;font-size:.82rem;margin-bottom:.6rem;">' +
+                 'Individual Detections:</p>';
+      data.detections.forEach((d, i) => {
+        html += `
+          <div class="det-item">
+            <span>
+              Pothole ${i+1} &nbsp;|&nbsp;
+              ${d.width}×${d.height}px &nbsp;|&nbsp;
+              area: ${d.area}px² &nbsp;|&nbsp;
+              conf: ${(d.confidence*100).toFixed(1)}%
+            </span>
+            <span class="det-sev ${d.severity}">${d.severity}</span>
+          </div>`;
+      });
+      detList.innerHTML = html;
+    } else {
+      detList.innerHTML = '<p style="color:#64748b;text-align:center;padding:1rem;">No potholes detected.</p>';
+    }
+
+    resultsCard.style.display = 'block';
+    resultsCard.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function showError(msg) {
+    errorBox.textContent = '⚠ ' + msg;
+    errorBox.style.display = 'block';
+  }
+</script>
+</body>
+</html>
