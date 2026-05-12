@@ -3,9 +3,7 @@
 A complete end-to-end AI system that detects potholes from road images using Deep Learning (YOLOv8), classifies their severity using Machine Learning (RandomForestClassifier), automatically sends email alerts for high-severity cases, and stores all results in a local SQLite database.
 
 ---
-
 ## Project Structure
-
 ```
 mlproject/
 │
@@ -292,9 +290,7 @@ pillow>=10.0.0
 ```
 
 ---
-
 ## Notes
-
 - Run all Python commands with `python -X utf8` on Windows to avoid Unicode encoding issues in the terminal.
 - The system works **without** a custom-trained `best.pt` — it falls back to `yolov8n.pt` (COCO-pretrained) which still detects common objects including road damage.
 - For best pothole detection accuracy, train YOLOv8 on a real annotated pothole dataset.
