@@ -31,6 +31,9 @@ from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
 
+# Load .env file for persistent credentials (auto-loads on import)
+from dotenv import load_dotenv
+load_dotenv()
 
 # ──────────────────────────────────────────────
 # Email configuration  (use environment vars for security)
