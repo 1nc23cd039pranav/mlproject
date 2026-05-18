@@ -200,26 +200,19 @@ dataset/
 ```
 
 ### YOLO Label Format (one line per pothole)
-
 ```
 0 <cx_norm> <cy_norm> <width_norm> <height_norm>
 ```
-
 ### Run Training
-
 ```bash
 python train_yolo.py
 # OR using yolo CLI:
 yolo detect train data=data.yaml model=yolov8n.pt epochs=50 imgsz=640
 ```
-
 Training output: `runs/detect/pothole_detector/weights/best.pt`  
 The script auto-copies it to `best.pt` in the project root.
-
 ---
-
 ## ML Model Details
-
 | Property | Value |
 |----------|-------|
 | Algorithm | RandomForestClassifier |
@@ -237,20 +230,14 @@ The script auto-copies it to `best.pt` in the project root.
 | Low | < 65px | < 45px | < 3000px² |
 | Medium | 65–130px | 45–85px | 3000–9000px² |
 | High | > 130px | > 85px | > 9000px² |
-
 ---
-
 ## CLI Usage
-
 ```bash
 # Detect potholes in a single image (no email)
 python -X utf8 main.py path/to/road.jpg --no-email
 
 # With custom output folder
 python -X utf8 main.py road.jpg --out my_results/ --location "MG Road, Block 5"
-
-# With email alert enabled
-python -X utf8 main.py road.jpg --location "Highway NH-48, km 132"
 
 # Quick classification test
 python -X utf8 classify.py
