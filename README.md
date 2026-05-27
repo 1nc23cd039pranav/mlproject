@@ -122,7 +122,6 @@ Return JSON response to frontend
 ---
 
 ## API Endpoints
-
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/` | Web UI (upload form) |
@@ -133,7 +132,6 @@ Return JSON response to frontend
 | GET | `/results/<filename>` | Serve annotated result images |
 
 ### Example `/predict` Response
-
 ```json
 {
   "success": true,
@@ -159,7 +157,6 @@ Return JSON response to frontend
 ---
 
 ## Email Alert Setup
-
 Edit `email_alert.py` or set environment variables:
 
 ```powershell
@@ -175,9 +172,7 @@ $env:POTHOLE_RECEIVER_EMAIL  = "maintenance@city.gov"
 ---
 
 ## YOLOv8 Training (with Real Dataset)
-
 ### Dataset Sources
-
 | Dataset | URL |
 |---------|-----|
 | Pothole Detection (Kaggle) | https://www.kaggle.com/datasets/sovitrath/pothole-detection |
@@ -185,7 +180,6 @@ $env:POTHOLE_RECEIVER_EMAIL  = "maintenance@city.gov"
 | Pothole-600 | https://sites.google.com/view/pothole-600 |
 
 ### Dataset Structure Required
-
 ```
 dataset/
 ├── train/
